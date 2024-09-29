@@ -1,7 +1,8 @@
 <script setup>
 import {onMounted, ref} from 'vue'
-import {GetPdf} from '../../wailsjs/go/main/App'
+import {GetPdf, OpenFileOrFolder} from '../../wailsjs/go/main/App'
 import {EventsOff, EventsOn, EventsOnce} from "../../wailsjs/runtime/runtime.js";
+import {ElMessage} from "element-plus";
 
 const startPage = ref(0)
 const endPage = ref(0)
@@ -12,6 +13,7 @@ const quality = ref(8)
 const processing = ref(false)
 
 const progress = ref(0)
+const tip = ref("")
 
 const getPagePreview = id => {
   if (!Number.isInteger(id)) {
@@ -40,18 +42,25 @@ function pageChanged() {
   }
 }
 
-const download = () => {
-  EventsOnce("complete", () => {
+const download = async () => {
+  EventsOnce("complete", path => {
     processing.value = false
     EventsOff("progress")
+    tip.value = path
   })
   EventsOn("progress", p => {
     progress.value = parseInt(p)
   })
   const sanitizedBookName = sanitizeFileName(bookName.value)
-  GetPdf(parseInt(fixedStartPage.value), parseInt(fixedEndPage.value), sanitizedBookName)
   processing.value = true
+  await GetPdf(parseInt(fixedStartPage.value), parseInt(fixedEndPage.value), sanitizedBookName, quality.value)
   progress.value = 0
+  ElMessage.success("下载完成")
+}
+
+const openFile = file => {
+  console.log(file)
+  OpenFileOrFolder(file)
 }
 
 </script>
@@ -61,11 +70,7 @@ const download = () => {
     <div style="display: flex; justify-content: center">
       <div style="max-width: 120px">
         <div style="height: 150px">
-          <el-image :src=getPagePreview(fixedStartPage) class="preview-page" @load="onPagePreviewLoaded">
-            <template #error>
-              <div/>
-            </template>
-          </el-image>
+          <el-image :src=getPagePreview(fixedStartPage) class="preview-page" @load="onPagePreviewLoaded"/>
           <div>{{fixedStartPage}}</div>
         </div>
         <el-input :disabled="processing" v-model="startPage" type="number" min="0" step="1" @change="pageChanged" placeholder="请输入起始页码"/>
@@ -85,23 +90,34 @@ const download = () => {
     <div style="margin: 20px">
       <el-input :disabled="processing" v-model="bookName" placeholder="请输入书名"></el-input>
     </div>
-    <div style="padding: 0 20px">
-      <div>
-        图片质量
+    <div style="padding: 0 20px; display: flex; align-items: center">
+      <div style="flex: none;">
+        图片质量：
       </div>
-      <el-slider :disabled="processing" v-model="quality" :step="1" :min="0" :max="8" show-stops show-input/>
+      <el-slider :disabled="processing" v-model="quality" :step="1" :min="0" :max="8" show-stops show-input />
     </div>
     <div>
       <el-button :disabled="processing" type="success" size="large" @click="download">下载</el-button>
     </div>
-    <div v-if="processing" style="padding: 0 20px">
+    <div style="padding: 10px 20px; display: flex">
+      <div>
+        下载进度：
+      </div>
       <el-progress
+          style="flex: auto"
           :percentage="progress"
           :stroke-width="15"
           striped
           striped-flow
           :duration="10"
       />
+    </div>
+
+    <div>
+      <el-link @click="openFile(tip)">
+        {{tip}}
+      </el-link>
+
     </div>
   </main>
 </template>

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 )
@@ -32,7 +33,17 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
-func (a *App) GetPdf(startPage int, endPage int, bookName string) {
+// 打开本地文件或文件夹
+func (a *App) OpenFileOrFolder(path string) error {
+	var cmd *exec.Cmd
+
+	// 仅考虑windows系统
+	cmd = exec.Command("explorer", path)
+
+	return cmd.Start()
+}
+
+func (a *App) GetPdf(startPage int, endPage int, bookName string, quality int) {
 	fmt.Printf("开始下载书籍: %s, 从第 %d 页到第 %d 页\n", bookName, startPage, endPage)
 
 	// 创建临时文件夹
@@ -49,7 +60,7 @@ func (a *App) GetPdf(startPage int, endPage int, bookName string) {
 		pageStr := strconv.Itoa(page)
 
 		// 图片 URL
-		imageURL := "https://docs.historyrussia.org/pages/" + pageStr + "/zooms/" + strconv.Itoa(4)
+		imageURL := "https://docs.historyrussia.org/pages/" + pageStr + "/zooms/" + strconv.Itoa(quality)
 
 		// 本地保存路径
 		filePath := filepath.Join(tempDir, pageStr+".jpg")
@@ -85,7 +96,7 @@ func (a *App) GetPdf(startPage int, endPage int, bookName string) {
 
 	// 将图片合成 PDF
 	outputPDF := bookName + ".pdf"
-	imagesToPdf(inputPaths, outputPDF)
+	path := imagesToPdf(inputPaths, outputPDF)
 
-	runtime.EventsEmit(a.ctx, "complete")
+	runtime.EventsEmit(a.ctx, "complete", path)
 }

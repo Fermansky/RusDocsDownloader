@@ -6,6 +6,7 @@ import (
 	"image"
 	"log"
 	"os"
+	filepath2 "path/filepath"
 )
 
 // 函数用于读取图片的宽高
@@ -25,7 +26,7 @@ func getImageDimensions(imagePath string) (float64, float64, error) {
 	return float64(img.Width), float64(img.Height), nil
 }
 
-func imagesToPdf(imagePaths []string, filepath string) {
+func imagesToPdf(imagePaths []string, filepath string) string {
 	pdf := gopdf.GoPdf{}
 	pdf.Start(gopdf.Config{})
 
@@ -58,4 +59,7 @@ func imagesToPdf(imagePaths []string, filepath string) {
 	}
 
 	fmt.Printf("\nPDF 已生成: %s\n", filepath)
+	path, _ := filepath2.Abs(filepath)
+
+	return path
 }
