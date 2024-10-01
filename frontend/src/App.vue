@@ -18,7 +18,7 @@ import HelloWorld from './components/HelloWorld.vue'
   width: 30%;
   height: 30%;
   margin: auto;
-  padding: 10% 0 0;
+  padding: 5% 0 0;
   background-position: center;
   background-repeat: no-repeat;
   background-size: 100% 100%;

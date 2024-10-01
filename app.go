@@ -33,6 +33,10 @@ func (a *App) Greet(name string) string {
 	return fmt.Sprintf("Hello %s, It's show time!", name)
 }
 
+func (a *App) Scrape(url string) *BookInfo {
+	return Scrape(url, 0)
+}
+
 // 打开本地文件或文件夹
 func (a *App) OpenFileOrFolder(path string) error {
 	var cmd *exec.Cmd
@@ -43,8 +47,7 @@ func (a *App) OpenFileOrFolder(path string) error {
 	return cmd.Start()
 }
 
-func (a *App) GetPdf(startPage int, endPage int, bookName string, quality int) {
-	fmt.Printf("开始下载书籍: %s, 从第 %d 页到第 %d 页\n", bookName, startPage, endPage)
+func (a *App) GetPdf(pages []int, bookName string, quality int) {
 
 	// 创建临时文件夹
 	tempDir, err := os.MkdirTemp("", bookName)
@@ -54,9 +57,8 @@ func (a *App) GetPdf(startPage int, endPage int, bookName string, quality int) {
 	defer os.RemoveAll(tempDir) // 在函数结束时删除临时文件夹
 
 	fmt.Printf("创建了临时文件夹: %s\n", tempDir)
-
-	// 下载图片并保存到临时文件夹
-	for page := startPage; page <= endPage; page++ {
+	var downloaded = 0
+	for _, page := range pages {
 		pageStr := strconv.Itoa(page)
 
 		// 图片 URL
@@ -70,9 +72,10 @@ func (a *App) GetPdf(startPage int, endPage int, bookName string, quality int) {
 		if err != nil {
 			fmt.Printf("下载页面 %s 时发生错误: %v\n", pageStr, err)
 		} else {
+			downloaded++
 			//fmt.Printf("页面 %s 下载成功!\n", pageStr)
-			fmt.Printf("\r下载进度：%.2f%%", float64(page-startPage)/float64(endPage-startPage)*100)
-			runtime.EventsEmit(a.ctx, "progress", fmt.Sprintf("%.2f%%", float64(page-startPage)/float64(endPage-startPage)*100))
+			fmt.Printf("\r下载进度：%.2f%%", float64(downloaded)/float64(len(pages))*100)
+			runtime.EventsEmit(a.ctx, "progress", fmt.Sprintf("%.2f%%", float64(downloaded)/float64(len(pages))*100))
 		}
 	}
 
