@@ -39,6 +39,9 @@ func imagesToPdf(imagePaths []string, filepath string) string {
 			continue // 如果发生错误，跳过当前图片
 		}
 
+		width *= 72.0 / 150.0
+		height *= 72.0 / 150.0
+
 		// 添加新页面，并根据图片的尺寸设置页面大小
 		pdf.AddPageWithOption(gopdf.PageOption{PageSize: &gopdf.Rect{W: width, H: height}})
 

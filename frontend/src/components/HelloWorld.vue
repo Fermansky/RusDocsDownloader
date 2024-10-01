@@ -67,6 +67,8 @@ const downloadCheck = () => {
         })
         .catch(() => {
         })
+  } else {
+    download()
   }
 }
 
@@ -105,6 +107,7 @@ const scrape = async () => {
     bookInfo.title = book.Name
     bookInfo.pages = book.Pages
     bookInfo.pageNum = book.PageNum
+    console.log(bookInfo.pages)
     thumbnail.value = getPagePreview(bookInfo.pages[0], 5)
     processing.value = false
   })

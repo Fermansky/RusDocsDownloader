@@ -47,6 +47,21 @@ func (a *App) OpenFileOrFolder(path string) error {
 	return cmd.Start()
 }
 
+func (a *App) Update() {
+	err := ApplyUpdate()
+	if err != nil {
+		return
+	}
+}
+
+func (a *App) CheckUpdate() string {
+	update, err := CheckUpdate()
+	if err != nil {
+
+	}
+	return update
+}
+
 func (a *App) GetPdf(pages []int, bookName string, quality int) {
 
 	// 创建临时文件夹
@@ -58,14 +73,14 @@ func (a *App) GetPdf(pages []int, bookName string, quality int) {
 
 	fmt.Printf("创建了临时文件夹: %s\n", tempDir)
 	var downloaded = 0
-	for _, page := range pages {
+	for i, page := range pages {
 		pageStr := strconv.Itoa(page)
 
 		// 图片 URL
 		imageURL := "https://docs.historyrussia.org/pages/" + pageStr + "/zooms/" + strconv.Itoa(quality)
 
 		// 本地保存路径
-		filePath := filepath.Join(tempDir, pageStr+".jpg")
+		filePath := filepath.Join(tempDir, fmt.Sprintf("%05d.jpg", i))
 
 		// 调用下载函数
 		err := downloadFile(imageURL, filePath)

@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 )
@@ -98,7 +97,9 @@ func processDocuments(doc *goquery.Document, book *BookInfo) {
 			log.Fatal(err2)
 		}
 		docview := parseDocview(reader)
-		start = docview.Pages[0].Id
+		if len(docview.Pages) > 0 {
+			start = docview.Pages[0].Id
+		}
 	}
 
 	val2, exists2 := find.Last().Find("td").Last().Find("a").Attr("href")
@@ -113,12 +114,16 @@ func processDocuments(doc *goquery.Document, book *BookInfo) {
 			log.Fatal(err)
 		}
 		docview := parseDocview(reader)
-		end = docview.Pages[len(docview.Pages)-1].Id
+		if len(docview.Pages) > 0 {
+			end = docview.Pages[len(docview.Pages)-1].Id
+		}
 	}
 
 	//fmt.Printf("起始页%d，终止页%d，共计%d页。\n", start, end, end-start+1)
-	for i := start; i <= end; i++ {
-		book.Pages = append(book.Pages, i)
+	if start != 0 {
+		for i := start; i <= end; i++ {
+			appendUnique(&book.Pages, i)
+		}
 	}
 
 }
@@ -149,45 +154,10 @@ func processDocumentsHard(doc *goquery.Document, book *BookInfo) {
 			}
 			docview := parseDocview(reader)
 			for page := range docview.Pages {
-				book.Pages = append(book.Pages, page)
+				appendUnique(&book.Pages, page)
 			}
 		}
 	})
-
-	//val, exists := find.First().Find("td").Last().Find("a").Attr("href")
-	//if exists {
-	//	resp, err2 := http.Get("https://docs.historyrussia.org" + val)
-	//	if err2 != nil {
-	//		log.Fatal(err2)
-	//	}
-	//	defer resp.Body.Close()
-	//	reader, err2 := goquery.NewDocumentFromReader(resp.Body)
-	//	if err2 != nil {
-	//		log.Fatal(err2)
-	//	}
-	//	docview := parseDocview(reader)
-	//	start = docview.Pages[0].Id
-	//}
-	//
-	//val2, exists2 := find.Last().Find("td").Last().Find("a").Attr("href")
-	//if exists2 {
-	//	resp, err := http.Get("https://docs.historyrussia.org" + val2)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	defer resp.Body.Close()
-	//	reader, err := goquery.NewDocumentFromReader(resp.Body)
-	//	if err != nil {
-	//		log.Fatal(err)
-	//	}
-	//	docview := parseDocview(reader)
-	//	end = docview.Pages[len(docview.Pages)-1].Id
-	//}
-	//
-	////fmt.Printf("起始页%d，终止页%d，共计%d页。\n", start, end, end-start+1)
-	//for i := start; i <= end; i++ {
-	//	book.Pages = append(book.Pages, i)
-	//}
 
 }
 
@@ -227,19 +197,30 @@ func Scrape(url string, mode int) *BookInfo {
 	fmt.Println("页数：", pageNum)
 	book.PageNum = pageNum
 
+	docview := parseDocview(doc)
+	//fmt.Printf("起始页%d，结束页%d，共计%d页。\n", docview.Pages[0].Id, docview.Pages[len(docview.Pages)-1].Id, len(docview.Pages))
+	for _, page := range docview.Pages {
+		appendUnique(&book.Pages, page.Id)
+	}
 	if mode == 0 {
 		processDocuments(doc, &book)
 	} else {
 		processDocumentsHard(doc, &book)
 	}
-	docview := parseDocview(doc)
-	//fmt.Printf("起始页%d，结束页%d，共计%d页。\n", docview.Pages[0].Id, docview.Pages[len(docview.Pages)-1].Id, len(docview.Pages))
-	for _, page := range docview.Pages {
-		book.Pages = append(book.Pages, page.Id)
-	}
 	fmt.Println(len(book.Pages))
-	sort.Ints(book.Pages)
 	return &book
+}
+
+// appendUnique 添加元素到切片，如果元素已存在则不添加
+func appendUnique(slice *[]int, value int) {
+	// 检查value是否已存在于切片中
+	for _, v := range *slice {
+		if v == value {
+			return // 如果找到相同的值，则不添加
+		}
+	}
+	// 如果没有找到，添加到切片
+	*slice = append(*slice, value)
 }
 
 //func main() {

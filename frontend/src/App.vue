@@ -1,15 +1,26 @@
 <script setup>
 import HelloWorld from './components/HelloWorld.vue'
+import {CheckUpdate, Update} from "../wailsjs/go/main/App.js";
+import {ref} from "vue";
+
+const loading = ref(false)
+
+const test = () => {
+  loading.value = true
+  Update()
+}
 </script>
 
 <template>
-  <div>
-    <img id="logo" alt="Wails logo" src="./assets/images/historyrussia-logo.png"/>
+  <div v-loading="loading">
+    <div>
+      <img id="logo" alt="Wails logo" src="./assets/images/historyrussia-logo.png"/>
+    </div>
+    <div style="margin-top: 10px" @dblclick="test">
+      test-version
+    </div>
+    <HelloWorld/>
   </div>
-  <div style="margin-top: 10px">
-    俄罗斯历史档案获取工具
-  </div>
-  <HelloWorld/>
 </template>
 
 <style>
