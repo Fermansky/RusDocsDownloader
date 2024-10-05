@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"github.com/signintech/gopdf"
+	log "github.com/sirupsen/logrus"
 	"image"
-	"log"
 	"os"
 	filepath2 "path/filepath"
 )
@@ -35,7 +35,7 @@ func imagesToPdf(imagePaths []string, filepath string) string {
 		// 读取图片的宽高
 		width, height, err := getImageDimensions(imagePath)
 		if err != nil {
-			log.Printf("Error getting image dimensions for %s: %v", imagePath, err)
+			log.Infof("Error getting image dimensions for %s: %v", imagePath, err)
 			continue // 如果发生错误，跳过当前图片
 		}
 
@@ -48,7 +48,7 @@ func imagesToPdf(imagePaths []string, filepath string) string {
 		// 将图片插入 PDF 中
 		err = pdf.Image(imagePath, 0, 0, &gopdf.Rect{W: width, H: height})
 		if err != nil {
-			log.Printf("Error inserting image %s into PDF: %v", imagePath, err)
+			log.Infof("Error inserting image %s into PDF: %v", imagePath, err)
 			continue // 如果发生错误，跳过当前图片
 		}
 
@@ -61,7 +61,7 @@ func imagesToPdf(imagePaths []string, filepath string) string {
 		log.Fatalf("Error saving PDF to %s: %v", filepath, err)
 	}
 
-	fmt.Printf("\nPDF 已生成: %s\n", filepath)
+	log.Infof("PDF 已生成: %s", filepath)
 	path, _ := filepath2.Abs(filepath)
 
 	return path

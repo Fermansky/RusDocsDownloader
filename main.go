@@ -2,6 +2,8 @@ package main
 
 import (
 	"embed"
+	log "github.com/sirupsen/logrus"
+	"os"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -11,7 +13,26 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+func init() {
+	// 设置日志格式为JSON，便于日志处理和分析
+	log.SetFormatter(&log.TextFormatter{})
+
+	// 设置日志级别
+	log.SetLevel(log.InfoLevel)
+
+	// 创建一个日志文件，所有日志会写入这个文件
+	file, err := os.OpenFile("app.log", os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+	if err == nil {
+		log.SetOutput(file)
+	} else {
+		// 如果创建文件失败，日志输出到标准输出
+		log.SetOutput(os.Stdout)
+		log.Warn("Failed to log to file, using default stdout")
+	}
+}
+
 func main() {
+
 	// Create an instance of the app structure
 	app := NewApp()
 

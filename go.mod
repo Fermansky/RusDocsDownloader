@@ -10,6 +10,7 @@ require (
 	github.com/inconshreveable/go-update v0.0.0-20160112193335-8152e7eb6ccf
 	github.com/pkg/errors v0.9.1
 	github.com/signintech/gopdf v0.27.1
+	github.com/sirupsen/logrus v1.9.3
 	github.com/wailsapp/wails/v2 v2.9.2
 )
 

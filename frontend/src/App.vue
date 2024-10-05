@@ -17,7 +17,7 @@ const test = () => {
       <img id="logo" alt="Wails logo" src="./assets/images/historyrussia-logo.png"/>
     </div>
     <div style="margin-top: 10px" @dblclick="test">
-      test-version
+      v0.1.1-SNAPSHOT
     </div>
     <HelloWorld/>
   </div>

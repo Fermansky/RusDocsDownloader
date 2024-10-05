@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
 	"os"
@@ -32,6 +33,7 @@ func downloadFile(url, filepath string) error {
 	// 获取文件大小
 	total := response.ContentLength
 	if total <= 0 {
+		log.Error("unable to determine file size")
 		return fmt.Errorf("unable to determine file size")
 	}
 

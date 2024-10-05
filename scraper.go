@@ -2,9 +2,8 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/PuerkitoBio/goquery"
-	"log"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -60,7 +59,7 @@ func parseDocview(doc *goquery.Document) Book {
 				// 使用 json.Unmarshal 来解析 JSON 字符串
 				err := json.Unmarshal([]byte(text), &book)
 				if err != nil {
-					fmt.Println("JSON 解析错误:", err)
+					log.Error("JSON 解析错误:", err)
 					return
 				}
 
@@ -75,12 +74,12 @@ func processDocuments(doc *goquery.Document, book *BookInfo) {
 	find := doc.Find(".nodes-list").Find("tbody").Find("tr")
 
 	if len(find.Nodes) == 0 {
-		fmt.Println("文档类型：I型文档")
+		log.Info("文档类型：I型文档")
 		book.Type = 1
 		return
 	}
 
-	fmt.Println("文档类型：II型文档")
+	log.Info("文档类型：II型文档")
 	book.Type = 2
 
 	var start, end int
@@ -132,12 +131,12 @@ func processDocumentsHard(doc *goquery.Document, book *BookInfo) {
 	find := doc.Find(".nodes-list").Find("tbody").Find("tr")
 
 	if len(find.Nodes) == 0 {
-		fmt.Println("文档类型：I型文档")
+		log.Info("文档类型：I型文档")
 		book.Type = 1
 		return
 	}
 
-	fmt.Println("文档类型：II型文档")
+	log.Info("文档类型：II型文档")
 	book.Type = 2
 
 	find.Each(func(i int, s *goquery.Selection) {
@@ -194,7 +193,7 @@ func Scrape(url string, mode int) *BookInfo {
 	re := regexp.MustCompile(`^\d+`)
 	numStr := re.FindString(strings.TrimSpace(doc.Find(".value_of_type_11").Text()))
 	pageNum, _ := strconv.Atoi(numStr)
-	fmt.Println("页数：", pageNum)
+	log.Info("页数：", pageNum)
 	book.PageNum = pageNum
 
 	docview := parseDocview(doc)
@@ -207,7 +206,6 @@ func Scrape(url string, mode int) *BookInfo {
 	} else {
 		processDocumentsHard(doc, &book)
 	}
-	fmt.Println(len(book.Pages))
 	return &book
 }
 
