@@ -210,9 +210,9 @@ const thumbnail = ref("")
     </div>
 
     <div>
-      <el-link @click="openFile(tip)">
+      <div @click="openFile(tip)" class="file-link">
         {{tip}}
-      </el-link>
+      </div>
     </div>
   </main>
 </template>
@@ -223,6 +223,17 @@ const thumbnail = ref("")
   color: white;
   font-size: 16px;
   font-weight: bold;
+}
+
+.file-link {
+  padding: 10px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.file-link:hover {
+  color: #67c23a;
+  cursor: pointer;
 }
 
 .preview-page {

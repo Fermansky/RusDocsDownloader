@@ -35,7 +35,7 @@ func imagesToPdf(imagePaths []string, filepath string) string {
 		// 读取图片的宽高
 		width, height, err := getImageDimensions(imagePath)
 		if err != nil {
-			log.Infof("Error getting image dimensions for %s: %v", imagePath, err)
+			log.Errorf("Error getting image dimensions for %s: %v", imagePath, err)
 			continue // 如果发生错误，跳过当前图片
 		}
 

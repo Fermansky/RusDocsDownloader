@@ -3,19 +3,23 @@ package main
 import (
 	"context"
 	"fmt"
+	log "github.com/sirupsen/logrus"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"sync"
 )
 
 // App struct
 type App struct {
 	ctx context.Context
 }
+
+var semaphore = make(chan struct{}, 10) // 限制最大并发 Goroutines 数量为 10
 
 // NewApp creates a new App application struct
 func NewApp() *App {
@@ -62,59 +66,102 @@ func (a *App) CheckUpdate() string {
 	return update
 }
 
-func (a *App) GetPdf(pages []int, bookName string, quality int) {
+func (a *App) GetPdf(pages []int, bookName string, quality int) error {
 
 	// 创建临时文件夹
-	tempDir, err := os.MkdirTemp("", bookName)
+	tempDir, err := os.MkdirTemp("", sanitizeFileName(bookName))
 	if err != nil {
-		log.Fatalf("无法创建临时文件夹: %v", err)
+		log.Errorf("无法创建临时文件夹: %v", err)
+		return err
 	}
 	defer os.RemoveAll(tempDir) // 在函数结束时删除临时文件夹
 
 	fmt.Printf("创建了临时文件夹: %s\n", tempDir)
-	var downloaded = 0
+	var wg sync.WaitGroup
+	var mu sync.Mutex // 保护共享资源
+
+	downloaded := 0
+	totalPages := len(pages)
+	fmt.Println(totalPages)
+	errorChan := make(chan error, totalPages)
+
+	// 并发下载每个页面的图片
 	for i, page := range pages {
-		pageStr := strconv.Itoa(page)
+		wg.Add(1)
+		go func(i, page int) {
+			defer wg.Done()
 
-		// 图片 URL
-		imageURL := "https://docs.historyrussia.org/pages/" + pageStr + "/zooms/" + strconv.Itoa(quality)
+			semaphore <- struct{}{}        // 占用一个并发槽位
+			defer func() { <-semaphore }() // 释放并发槽位
 
-		// 本地保存路径
-		filePath := filepath.Join(tempDir, fmt.Sprintf("%05d.jpg", i))
+			pageStr := strconv.Itoa(page)
+			imageURL := "https://docs.historyrussia.org/pages/" + pageStr + "/zooms/" + strconv.Itoa(quality)
+			filePath := filepath.Join(tempDir, fmt.Sprintf("%05d.jpg", i))
 
-		// 调用下载函数
-		err := downloadFile(imageURL, filePath)
-		if err != nil {
-			fmt.Printf("下载页面 %s 时发生错误: %v\n", pageStr, err)
-		} else {
+			// 调用下载函数
+			err := downloadFileWithRetry(imageURL, filePath)
+			if err != nil {
+				log.Errorf("下载页面 %s 时发生错误: %v\n", pageStr, err)
+				errorChan <- err
+				return
+			}
+
+			mu.Lock()
 			downloaded++
-			//fmt.Printf("页面 %s 下载成功!\n", pageStr)
-			fmt.Printf("\r下载进度：%.2f%%", float64(downloaded)/float64(len(pages))*100)
-			runtime.EventsEmit(a.ctx, "progress", fmt.Sprintf("%.2f%%", float64(downloaded)/float64(len(pages))*100))
-		}
+			progress := float64(downloaded) / float64(totalPages) * 100
+			mu.Unlock()
+
+			// 发送下载进度到前端
+			runtime.EventsEmit(a.ctx, "progress", fmt.Sprintf("%.2f%%", progress))
+		}(i, page)
 	}
 
-	fmt.Println()
+	wg.Wait() // 等待所有下载任务完成
+	close(errorChan)
+
+	// 检查是否有下载错误
+	if len(errorChan) > 0 {
+		return fmt.Errorf("下载过程中出现错误")
+	}
 
 	// 获取临时文件夹中的所有图片路径
-	var inputPaths []string
-	files, err := ioutil.ReadDir(tempDir)
+	inputPaths, err := getImagePaths(tempDir)
 	if err != nil {
-		log.Fatalf("读取临时文件夹时发生错误: %v", err)
+		log.Errorf("读取临时文件夹时发生错误: %v", err)
+		return err
+	}
+	log.Infof("临时文件夹中共有%d张图片", len(inputPaths))
+
+	// 将图片合成 PDF
+	outputPDF := sanitizeFileName(bookName) + ".pdf"
+	path := imagesToPdf(inputPaths, outputPDF)
+
+	// 通知前端任务完成
+	runtime.EventsEmit(a.ctx, "complete", path)
+	return nil
+}
+
+// sanitizeFileName 确保文件名没有非法字符
+func sanitizeFileName(name string) string {
+	return strings.ReplaceAll(name, " ", "_") // 你可以根据需要进行更多的字符替换
+}
+
+// getImagePaths 获取指定文件夹中的所有图片路径
+func getImagePaths(dir string) ([]string, error) {
+	var inputPaths []string
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
 	}
 
 	for _, file := range files {
 		if !file.IsDir() {
-			filePath := filepath.Join(tempDir, file.Name())
+			filePath := filepath.Join(dir, file.Name())
 			if filepath.Ext(filePath) == ".jpg" || filepath.Ext(filePath) == ".png" {
 				inputPaths = append(inputPaths, filePath)
+				fmt.Println(file.Name(), file.Size())
 			}
 		}
 	}
-
-	// 将图片合成 PDF
-	outputPDF := bookName + ".pdf"
-	path := imagesToPdf(inputPaths, outputPDF)
-
-	runtime.EventsEmit(a.ctx, "complete", path)
+	return inputPaths, nil
 }
