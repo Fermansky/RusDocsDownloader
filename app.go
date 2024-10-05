@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strconv"
-	"strings"
 	"sync"
 )
 
@@ -69,20 +68,19 @@ func (a *App) CheckUpdate() string {
 func (a *App) GetPdf(pages []int, bookName string, quality int) error {
 
 	// 创建临时文件夹
-	tempDir, err := os.MkdirTemp("", sanitizeFileName(bookName))
+	tempDir, err := os.MkdirTemp("", bookName)
 	if err != nil {
 		log.Errorf("无法创建临时文件夹: %v", err)
 		return err
 	}
 	defer os.RemoveAll(tempDir) // 在函数结束时删除临时文件夹
 
-	fmt.Printf("创建了临时文件夹: %s\n", tempDir)
+	log.Infof("创建了临时文件夹: %s\n", tempDir)
 	var wg sync.WaitGroup
 	var mu sync.Mutex // 保护共享资源
 
 	downloaded := 0
 	totalPages := len(pages)
-	fmt.Println(totalPages)
 	errorChan := make(chan error, totalPages)
 
 	// 并发下载每个页面的图片
@@ -121,6 +119,7 @@ func (a *App) GetPdf(pages []int, bookName string, quality int) error {
 
 	// 检查是否有下载错误
 	if len(errorChan) > 0 {
+		log.Errorf("下载过程中出现错误")
 		return fmt.Errorf("下载过程中出现错误")
 	}
 
@@ -133,17 +132,12 @@ func (a *App) GetPdf(pages []int, bookName string, quality int) error {
 	log.Infof("临时文件夹中共有%d张图片", len(inputPaths))
 
 	// 将图片合成 PDF
-	outputPDF := sanitizeFileName(bookName) + ".pdf"
+	outputPDF := bookName + ".pdf"
 	path := imagesToPdf(inputPaths, outputPDF)
 
 	// 通知前端任务完成
 	runtime.EventsEmit(a.ctx, "complete", path)
 	return nil
-}
-
-// sanitizeFileName 确保文件名没有非法字符
-func sanitizeFileName(name string) string {
-	return strings.ReplaceAll(name, " ", "_") // 你可以根据需要进行更多的字符替换
 }
 
 // getImagePaths 获取指定文件夹中的所有图片路径
@@ -159,7 +153,6 @@ func getImagePaths(dir string) ([]string, error) {
 			filePath := filepath.Join(dir, file.Name())
 			if filepath.Ext(filePath) == ".jpg" || filepath.Ext(filePath) == ".png" {
 				inputPaths = append(inputPaths, filePath)
-				fmt.Println(file.Name(), file.Size())
 			}
 		}
 	}
